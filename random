@@ -19,7 +19,9 @@ function module_upvr.GetEquipped()
         print("No save data found for the player.")
         return {}
     end
-    return PetNetworking_upvr.EquippedPets()
+    local pets = PetNetworking_upvr.EquippedPets()
+    print("Equipped Pets:", pets)
+    return pets
 end
 
 -- Function to get all breakables in the game
@@ -36,6 +38,7 @@ function module_upvr.GetAllBreakables()
             table.insert(breakables, breakable)
         end
     end
+    print("Found Breakables:", breakables)
     return breakables
 end
 
@@ -57,6 +60,7 @@ function module_upvr.SendPetsToBreak()
         local stageModel, stageNumber, totalStages = BreakablesUtil.GetStage(breakable.Name, 0, 0)
         
         if pet.euid and breakable and stageModel then
+            print("Assigning Pet", pet.euid, "to Breakable", stageModel.Name)
             -- First, set pet target
             targetArgs[1][pet.euid] = {
                 ["t"] = 2,  -- Type 2 (target a breakable)
@@ -68,10 +72,12 @@ function module_upvr.SendPetsToBreak()
         end
     end
     
+    print("Sending target assignment:", targetArgs)
     -- Fire the first event to set targets
     ReplicatedStorage:WaitForChild("Network"):WaitForChild("Pets_SetTargetBulk"):FireServer(unpack(targetArgs))
     task.wait(0.1)  -- Short delay to ensure proper targeting
     
+    print("Sending attack command:", attackArgs)
     -- Fire the second event to start breaking
     ReplicatedStorage:WaitForChild("Network"):WaitForChild("Breakables_JoinPetBulk"):FireServer(unpack(attackArgs))
     
