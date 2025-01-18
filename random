@@ -1,0 +1,66 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+
+-- Required modules
+local PetItem_upvr = require(ReplicatedStorage.Library.Items.PetItem)
+local Save_upvr = require(ReplicatedStorage.Library.Client.Save)
+local PetNetworking_upvr = require(ReplicatedStorage.Library.Client.PetNetworking)
+local Network_upvr = require(ReplicatedStorage.Library.Client.Network)
+local BreakablesUtil = require(ReplicatedStorage.Library.Util.BreakablesUtil)
+
+local module_upvr = {}
+
+-- Function to get the equipped pets of the local player
+function module_upvr.GetEquipped()
+    local playerSave = Save_upvr.Local()
+    if not playerSave then
+        print("No save data found for the player.")
+        return {}
+    end
+    return PetNetworking_upvr.EquippedPets()
+end
+
+-- Function to get all breakables in the game
+function module_upvr.GetAllBreakables()
+    local breakablesFolder = Workspace:FindFirstChild("__THINGS") and Workspace.__THINGS:FindFirstChild("Breakables")
+    if not breakablesFolder then
+        print("No breakables found in the workspace.")
+        return {}
+    end
+
+    local breakables = {}
+    for _, breakable in pairs(breakablesFolder:GetChildren()) do
+        if breakable:IsA("Model") then
+            table.insert(breakables, breakable)
+        end
+    end
+    return breakables
+end
+
+-- Function to make equipped pets attack breakables
+function module_upvr.SendPetsToBreak()
+    local equippedPets = module_upvr.GetEquipped()
+    local breakables = module_upvr.GetAllBreakables()
+    
+    if #equippedPets == 0 or #breakables == 0 then
+        print("No equipped pets or breakables found.")
+        return
+    end
+
+    local args = { [1] = {} }
+    for _, breakable in ipairs(breakables) do
+        local pet = equippedPets[math.random(1, #equippedPets)]  -- Select a random pet
+        local stageModel, stageNumber, totalStages = BreakablesUtil.GetStage(breakable.Name, 0, 0)
+        if pet.euid and breakable and stageModel then
+            args[1][pet.euid] = stageModel.Name
+        end
+    end
+
+    ReplicatedStorage:WaitForChild("Network"):WaitForChild("Breakables_JoinPetBulk"):FireServer(unpack(args))
+    print("Sent pets to breakables!")
+end
+
+-- Example: Call this function to send pets to breakables
+module_upvr.SendPetsToBreak()
