@@ -49,17 +49,33 @@ function module_upvr.SendPetsToBreak()
         return
     end
 
-    local args = { [1] = {} }
+    local targetArgs = { [1] = {} }
+    local attackArgs = { [1] = {} }
+    
     for _, breakable in ipairs(breakables) do
         local pet = equippedPets[math.random(1, #equippedPets)]  -- Select a random pet
         local stageModel, stageNumber, totalStages = BreakablesUtil.GetStage(breakable.Name, 0, 0)
+        
         if pet.euid and breakable and stageModel then
-            args[1][pet.euid] = stageModel.Name
+            -- First, set pet target
+            targetArgs[1][pet.euid] = {
+                ["t"] = 2,  -- Type 2 (target a breakable)
+                ["v"] = stageModel.Name
+            }
+            
+            -- Then, send pet to attack
+            attackArgs[1][pet.euid] = stageModel.Name
         end
     end
-
-    ReplicatedStorage:WaitForChild("Network"):WaitForChild("Breakables_JoinPetBulk"):FireServer(unpack(args))
-    print("Sent pets to breakables!")
+    
+    -- Fire the first event to set targets
+    ReplicatedStorage:WaitForChild("Network"):WaitForChild("Pets_SetTargetBulk"):FireServer(unpack(targetArgs))
+    task.wait(0.1)  -- Short delay to ensure proper targeting
+    
+    -- Fire the second event to start breaking
+    ReplicatedStorage:WaitForChild("Network"):WaitForChild("Breakables_JoinPetBulk"):FireServer(unpack(attackArgs))
+    
+    print("Pets have been assigned to breakables!")
 end
 
 -- Example: Call this function to send pets to breakables
